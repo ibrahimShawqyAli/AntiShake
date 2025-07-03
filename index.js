@@ -59,6 +59,50 @@ app.post("/api/device/update", async (req, res) => {
     res.status(500).json({ error: "Failed to update device state" });
   }
 });
+app.post("/api/device/header", async (req, res) => {
+  const device_id = req.headers["device-id"];
+  const status = req.headers["status"];
+  const tilt = parseInt(req.headers["tilt"]);
+  const vibration = parseInt(req.headers["vibration"]);
+  const door_opened = parseInt(req.headers["door-opened"]);
+
+  console.log("🛰️ GPRS Headers Received:", {
+    device_id,
+    status,
+    tilt,
+    vibration,
+    door_opened,
+  });
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool
+      .request()
+      .input("device_id", sql.VarChar, device_id)
+      .input("status", sql.VarChar, status)
+      .input("tilt", sql.Bit, tilt)
+      .input("vibration", sql.Bit, vibration)
+      .input("door_opened", sql.Bit, door_opened).query(`
+        INSERT INTO DeviceStatus (device_id, status, tilt, vibration, door_opened, timestamp)
+        VALUES (@device_id, @status, @tilt, @vibration, @door_opened, GETDATE())
+      `);
+
+    wsControl.broadcast({
+      type: "device-update",
+      device_id,
+      status,
+      tilt,
+      vibration,
+      door_opened,
+    });
+
+    console.log("📡 WebSocket broadcast sent");
+    res.json({ status: true, message: "Header data inserted and broadcasted" });
+  } catch (err) {
+    console.error("DB Error:", err);
+    res.status(500).json({ error: "Failed to update device state via header" });
+  }
+});
 
 // 📋 API: Get latest state for a specific device
 app.get("/api/device/:id", async (req, res) => {
