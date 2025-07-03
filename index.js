@@ -3,6 +3,7 @@ const sql = require("mssql");
 const http = require("http");
 const cors = require("cors");
 const { setupWebSocket, espClients } = require("./Websocket/webSetup");
+
 // store broadcast controller
 // 👈 your ws logic in websocket.js
 
@@ -11,6 +12,7 @@ const server = http.createServer(app); // 👈 shared server for HTTP and WebSoc
 const wsControl = setupWebSocket(server);
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // 🧠 SQL Server configuration
 const dbConfig = {
@@ -50,8 +52,8 @@ app.post("/api/device/update", async (req, res) => {
       vibration,
       door_opened,
     });
-
-    res.json({ status: true });
+    console.log("📡 WebSocket broadcast sent");
+    res.json({ status: true, message: "Data inserted and broadcasted" });
   } catch (err) {
     console.error("DB Error:", err);
     res.status(500).json({ error: "Failed to update device state" });
