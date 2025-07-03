@@ -27,7 +27,7 @@ const dbConfig = {
 // 📡 API: Receive state update from ESP32
 app.post("/api/device/update", async (req, res) => {
   const { device_id, status, tilt, vibration, door_opened } = req.body;
-
+  console.log("🛰️ GPRS Received:", req.body);
   try {
     const pool = await sql.connect(dbConfig);
     await pool
