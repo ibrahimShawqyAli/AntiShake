@@ -120,6 +120,42 @@ app.get("/api/device/:id", async (req, res) => {
   }
 });
 
+app.get("/api/device/fast", async (req, res) => {
+  const { id, s, t, v, d } = req.query; // id, status, tilt, vibration, door
+
+  if (!id) return res.status(400).json({ error: "Missing device ID" });
+
+  console.log("🚀 Fast GPRS Received:", req.query);
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool
+      .request()
+      .input("device_id", sql.VarChar, id)
+      .input("status", sql.VarChar, s)
+      .input("tilt", sql.Bit, parseInt(t))
+      .input("vibration", sql.Bit, parseInt(v))
+      .input("door_opened", sql.Bit, parseInt(d)).query(`
+        INSERT INTO DeviceStatus (device_id, status, tilt, vibration, door_opened, timestamp)
+        VALUES (@device_id, @status, @tilt, @vibration, @door_opened, GETDATE())
+      `);
+
+    wsControl.broadcast({
+      type: "device-update",
+      device_id: id,
+      status: s,
+      tilt: parseInt(t),
+      vibration: parseInt(v),
+      door_opened: parseInt(d),
+    });
+
+    res.send("OK");
+  } catch (err) {
+    console.error("DB Error:", err);
+    res.status(500).send("DB Error");
+  }
+});
+
 // 🚀 Start HTTP + WS server
 server.listen(8080, () => {
   console.log("✅ Server running on http://localhost:8080");
