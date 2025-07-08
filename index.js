@@ -120,19 +120,20 @@ app.get("/api/device/:id", async (req, res) => {
   }
 });
 
-app.get("/api/device/fast", async (req, res) => {
-  const { id, s, t, v, d } = req.query; // id, status, tilt, vibration, door
+app.get("/f", async (req, res) => {
+  const { i, s, t, v, d } = req.query;
 
-  if (!id) return res.status(400).json({ error: "Missing device ID" });
+  const device_id = i || "Unknown";
+  const status = s || "Unknown";
 
-  console.log("🚀 Fast GPRS Received:", req.query);
+  console.log("🚀 Fast GPRS:", { device_id, status, t, v, d });
 
   try {
     const pool = await sql.connect(dbConfig);
     await pool
       .request()
-      .input("device_id", sql.VarChar, id)
-      .input("status", sql.VarChar, s)
+      .input("device_id", sql.VarChar, device_id)
+      .input("status", sql.VarChar, status)
       .input("tilt", sql.Bit, parseInt(t))
       .input("vibration", sql.Bit, parseInt(v))
       .input("door_opened", sql.Bit, parseInt(d)).query(`
@@ -142,8 +143,8 @@ app.get("/api/device/fast", async (req, res) => {
 
     wsControl.broadcast({
       type: "device-update",
-      device_id: id,
-      status: s,
+      device_id,
+      status,
       tilt: parseInt(t),
       vibration: parseInt(v),
       door_opened: parseInt(d),
